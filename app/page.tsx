@@ -8,6 +8,7 @@ import { AgentSelector } from "@/components/agent-selector"
 import AgentProfile from "@/components/agent-profile"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
+import { Button } from "@/components/ui/button"
 import type { AgentContext } from "@/contexts/chat-context"
 
 export default function ChatPage() {
@@ -95,7 +96,19 @@ function ChatPageContent({
                   onClearChat={clearChat}
                 />
               ) : (
-                <AgentSelector onShowProfile={handleShowProfile} onClose={handleCloseAgentPanel} />
+                <>
+                  <AgentSelector onShowProfile={handleShowProfile} onClose={handleCloseAgentPanel} />
+
+                  {/* Call to Action */}
+                  <div className="mt-4 bg-white rounded-lg p-3 border border-gray-200 shadow-sm">
+                    <h3 className="font-medium text-base mb-3 text-center">
+                      Integrate our AI agents into your systems today
+                    </h3>
+                    <Button asChild className="w-full bg-purple-600 hover:bg-purple-700 text-white">
+                      <a href="/contact-us">Get Started</a>
+                    </Button>
+                  </div>
+                </>
               )}
             </div>
           )}

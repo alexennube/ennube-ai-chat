@@ -30,7 +30,8 @@ const defaultAgents: AgentContext[] = [
     agentId: "market-nurturer",
     agentName: "Market Nurturer",
     agentDescription: "Turn curiosity into confianza—then confianza into loyal customers",
-    agentImage: "/market-nurturer.png",
+    agentImage:
+      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/market-nurturer-u39lPltDPBVmXQBhCe5OH4NhFQ8JGQ.png",
     capabilities: [
       "Content creation",
       "Email campaigns",
@@ -43,7 +44,8 @@ const defaultAgents: AgentContext[] = [
     agentId: "meetings-booker",
     agentName: "Meetings Booker",
     agentDescription: "Schedule meetings with prospects efficiently",
-    agentImage: "/meetings-booker.png",
+    agentImage:
+      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/meetings-booker-NMIBy2hjh2ECD06WAUnWH6IwC38i3y.png",
     capabilities: [
       "Schedule meetings",
       "Send invitations",
@@ -56,39 +58,14 @@ const defaultAgents: AgentContext[] = [
     agentId: "data-steward",
     agentName: "Data Steward",
     agentDescription: "Keep your CRM data clean and organized",
-    agentImage: "/data-steward.png",
+    agentImage:
+      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/data-steward-EnlnQ7V3EZRCXz5z3KG9edmJXuW4AI.png",
     capabilities: [
       "Data cleaning",
       "Record deduplication",
       "Data enrichment",
       "Quality control",
       "Database management",
-    ],
-  },
-  {
-    agentId: "team-recruiter",
-    agentName: "Team Recruiter",
-    agentDescription: "Finding the perfect talent to join your growing team",
-    agentImage: "/team-recruiter.png",
-    capabilities: [
-      "Talent sourcing",
-      "Resume screening",
-      "Interview scheduling",
-      "Candidate evaluation",
-      "Offer management",
-    ],
-  },
-  {
-    agentId: "system-admin",
-    agentName: "System Admin",
-    agentDescription: "Keeping your CRM running smoothly and efficiently",
-    agentImage: "/system-admin.png",
-    capabilities: [
-      "System maintenance",
-      "User management",
-      "Security monitoring",
-      "Performance optimization",
-      "Troubleshooting",
     ],
   },
 ]
