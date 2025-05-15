@@ -77,6 +77,12 @@ function ChatPageContent({
     <div className="flex flex-col h-screen overflow-hidden">
       <Header />
       <MenuBar onViewAllAgents={handleViewAllAgents} />
+
+      {/* Agent Demo Banner */}
+      <div className="bg-gray-100 py-1 px-4 text-center border-b border-gray-200">
+        <span className="text-gray-700 text-sm font-medium">Agent Demo</span>
+      </div>
+
       <main className="flex-1 overflow-hidden p-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 h-full">
           {showAgentPanel && (
