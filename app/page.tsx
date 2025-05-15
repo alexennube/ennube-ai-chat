@@ -104,8 +104,13 @@ function ChatPageContent({
                     <h3 className="font-medium text-base mb-3 text-center">
                       Integrate our AI agents into your systems today
                     </h3>
-                    <Button asChild className="w-full bg-purple-600 hover:bg-purple-700 text-white">
-                      <a href="/contact-us">Get Started</a>
+                    <Button
+                      asChild
+                      className="w-full bg-gradient-to-r from-blue-500 via-purple-600 to-pink-500 hover:from-blue-600 hover:via-purple-700 hover:to-pink-600 text-white"
+                    >
+                      <a href="https://www.ennube.ai/contact-us" target="_blank" rel="noopener noreferrer">
+                        Get Started
+                      </a>
                     </Button>
                   </div>
                 </>
