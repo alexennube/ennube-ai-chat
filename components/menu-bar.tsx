@@ -9,7 +9,6 @@ import { useClickOutside } from "@/hooks/use-click-outside"
 import {
   ChevronDown,
   LogOut,
-  Settings,
   Home,
   PlusCircle,
   HelpCircle,
@@ -20,6 +19,7 @@ import {
   CreditCard,
   UserCircle,
   Users,
+  BarChart,
 } from "lucide-react"
 
 type MenuItem = {
@@ -83,9 +83,8 @@ export function MenuBar({ onViewAllAgents }: MenuBarProps) {
 
   const fileMenu: MenuItem[] = [
     { label: "New Chat", href: "/chat", icon: <PlusCircle className="h-4 w-4 mr-2" /> },
-    { label: "Home", href: "/", icon: <Home className="h-4 w-4 mr-2" /> },
-    { label: "Dashboard", href: "/dashboard", icon: <Settings className="h-4 w-4 mr-2" /> },
-    { label: "Settings", href: "/settings", icon: <Settings className="h-4 w-4 mr-2" /> },
+    { label: "Home", href: "https://app.ennube.ai", icon: <Home className="h-4 w-4 mr-2" /> },
+    { label: "Dashboard", href: "https://app.ennube.ai/dashboard", icon: <BarChart className="h-4 w-4 mr-2" /> },
     { type: "separator" } as any,
     { label: "Profile", href: "/profile", icon: <UserCircle className="h-4 w-4 mr-2" /> },
     { label: "Account", href: "/account", icon: <User className="h-4 w-4 mr-2" /> },
