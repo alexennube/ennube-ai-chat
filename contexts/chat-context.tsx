@@ -65,6 +65,9 @@ const generateChatTitle = (messages: Message[], agentName: string | null): strin
   return `Chat with ${agentName || "AI"} - ${new Date().toLocaleDateString()}`
 }
 
+// Helper function to add a delay
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState("")
@@ -75,6 +78,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
   const [activePollingJobId, setActivePollingJobId] = useState<string | null>(null)
   const [pollingIntervalId, setPollingIntervalId] = useState<NodeJS.Timeout | null>(null)
+  const [pollingRetryCount, setPollingRetryCount] = useState(0)
+  const [webhookErrorCount, setWebhookErrorCount] = useState(0)
+  const MAX_RETRY_COUNT = 3
+  const MAX_WEBHOOK_ERRORS = 2
 
   // Load saved chats from localStorage on mount
   useEffect(() => {
@@ -171,54 +178,211 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     [currentChatId],
   )
 
-  // Function to poll for job status
-  const pollJobStatus = useCallback(async (jobId: string, statusWebhookUrl: string) => {
+  // Function to directly get a response from the API without using webhooks
+  const getDirectResponse = useCallback(async (prompt: string, agentId: string) => {
     try {
-      const response = await fetch(statusWebhookUrl, {
+      console.log("Getting direct response from API for agent:", agentId)
+
+      const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ jobId }),
+        body: JSON.stringify({
+          messages: [{ role: "user", content: prompt }],
+          agent: agentId,
+        }),
       })
 
       if (!response.ok) {
-        console.error(`Status webhook error: ${response.status}`)
-        return null
+        throw new Error(`API error: ${response.status}`)
       }
 
-      const responseText = await response.text()
-
-      try {
-        const data = JSON.parse(responseText)
-        console.log("Status webhook response:", data)
-
-        // Check if job is complete
-        if (data.status === "completed" && data.output) {
-          return data.output
-        }
-
-        // Still processing
-        return null
-      } catch (jsonError) {
-        console.error("Error parsing status response:", jsonError)
-        return null
-      }
+      const data = await response.json()
+      return (
+        data.text ||
+        "I couldn't process your request through the normal channels, but I've generated a response for you directly."
+      )
     } catch (error) {
-      console.error("Error polling job status:", error)
-      return null
+      console.error("Error getting direct response:", error)
+      return "I'm having trouble processing your request through both the webhook and direct channels. Please try again later."
     }
   }, [])
 
-  // Function to start polling
+  // Function to poll for job status with improved error handling and retries
+  const pollJobStatus = useCallback(
+    async (jobId: string, statusWebhookUrl: string, userPrompt: string) => {
+      try {
+        console.log(`Polling job status for jobId: ${jobId}`)
+
+        // Create an AbortController for timeout
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+
+        // Use API route as a proxy to avoid CORS issues
+        const response = await fetch("/api/status-proxy", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            jobId,
+            webhookUrl: statusWebhookUrl,
+          }),
+          signal: controller.signal,
+        })
+
+        clearTimeout(timeoutId)
+
+        if (!response.ok) {
+          console.error(`Status proxy error: ${response.status}`)
+          setWebhookErrorCount((prev) => prev + 1)
+          return null
+        }
+
+        const responseText = await response.text()
+        console.log("Raw status response:", responseText)
+
+        let data
+        try {
+          data = JSON.parse(responseText)
+        } catch (jsonError) {
+          console.error("Error parsing status response:", jsonError)
+          setWebhookErrorCount((prev) => prev + 1)
+          return null
+        }
+
+        console.log("Status proxy response:", data)
+
+        // Check if we got a fallback response due to webhook errors
+        if (data.fallback) {
+          setWebhookErrorCount((prev) => prev + 1)
+
+          // If we've had too many webhook errors, try to get a direct response
+          if (webhookErrorCount >= MAX_WEBHOOK_ERRORS && agentContext) {
+            console.log("Too many webhook errors, getting direct response")
+            const directResponse = await getDirectResponse(userPrompt, agentContext.agentId)
+            return directResponse
+          }
+
+          // If we have a fallback output, use it
+          if (data.output) {
+            return data.output
+          }
+
+          return null
+        }
+
+        // Handle array response format
+        if (Array.isArray(data) && data.length > 0) {
+          const item = data[0]
+          console.log("Processing array item:", item)
+
+          // Check for Complete status (capital C)
+          if (item.status === "Complete" && item.Output && item.Output.output) {
+            const output = item.Output.output
+            console.log("Job completed with output:", output)
+
+            // Ensure we're returning a string
+            if (typeof output === "string") {
+              return output
+            } else if (output && typeof output === "object") {
+              console.log("Output is an object, converting to string:", output)
+              try {
+                // Try to get a meaningful string representation
+                return output.text || output.content || output.message || JSON.stringify(output)
+              } catch (e) {
+                console.error("Error stringifying output:", e)
+                return "The agent provided a response in an unexpected format."
+              }
+            }
+          }
+
+          // Check if Output exists even without Complete status
+          if (item.Output && item.Output.output) {
+            const output = item.Output.output
+            console.log("Found output without Complete status:", output)
+
+            // Ensure we're returning a string
+            if (typeof output === "string") {
+              return output
+            } else if (output && typeof output === "object") {
+              console.log("Output is an object, converting to string:", output)
+              try {
+                // Try to get a meaningful string representation
+                return output.text || output.content || output.message || JSON.stringify(output)
+              } catch (e) {
+                console.error("Error stringifying output:", e)
+                return "The agent provided a response in an unexpected format."
+              }
+            }
+          }
+
+          // Still processing
+          return null
+        }
+
+        // Handle single object response format (for backward compatibility)
+        // Check if job is still processing
+        if (data.status === "Processing") {
+          console.log("Job is still processing:", data.jobId)
+          // Return null to continue polling
+          return null
+        }
+
+        // Check for completed status - handle various formats
+        if (
+          (data.status === "completed" || data.status === "Completed" || data.status === "Complete") &&
+          data.output &&
+          data.output !== "null"
+        ) {
+          console.log("Job completed with output:", data.output)
+          return data.output
+        }
+
+        // Check if output exists even without status
+        if (data.output && data.output !== "null" && typeof data.output === "string" && data.output.trim() !== "") {
+          console.log("Found output without completed status:", data.output)
+          return data.output
+        }
+
+        // Still processing or unknown status
+        return null
+      } catch (error) {
+        console.error("Error polling job status:", error)
+        setWebhookErrorCount((prev) => prev + 1)
+
+        // If we've had too many webhook errors, try to get a direct response
+        if (webhookErrorCount >= MAX_WEBHOOK_ERRORS && agentContext) {
+          console.log("Too many webhook errors, getting direct response")
+          const directResponse = await getDirectResponse(userPrompt, agentContext.agentId)
+          return directResponse
+        }
+
+        // Reset retry count after too many failures
+        if (pollingRetryCount >= MAX_RETRY_COUNT) {
+          setPollingRetryCount(0)
+          return "I'm having trouble checking the status of your request. The agent might still be working on your request, but I can't confirm that right now."
+        }
+
+        return null
+      }
+    },
+    [pollingRetryCount, webhookErrorCount, getDirectResponse, agentContext],
+  )
+
+  // Function to start polling with improved error handling
   const startPolling = useCallback(
-    (jobId: string, statusWebhookUrl: string) => {
+    (jobId: string, statusWebhookUrl: string, userPrompt: string) => {
       // Clear any existing polling
       if (pollingIntervalId) {
         clearInterval(pollingIntervalId)
+        setPollingIntervalId(null)
       }
 
       setActivePollingJobId(jobId)
+      setPollingRetryCount(0)
+      setWebhookErrorCount(0)
 
       // Set a timeout for the entire polling process (3 minutes)
       const pollingTimeout = setTimeout(
@@ -227,15 +391,29 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             clearInterval(pollingIntervalId)
             setPollingIntervalId(null)
             setIsThinking(false)
+            setActivePollingJobId(null)
 
-            // Add timeout message
-            const timeoutMessage = {
-              id: uuidv4(),
-              content: "I'm sorry, but I couldn't get a response in time. Please try again.",
-              role: "assistant" as const,
-              timestamp: Date.now(),
+            // Try to get a direct response as a last resort
+            if (agentContext) {
+              getDirectResponse(userPrompt, agentContext.agentId).then((directResponse) => {
+                const timeoutMessage = {
+                  id: uuidv4(),
+                  content: directResponse || "I'm sorry, but I couldn't get a response in time. Please try again.",
+                  role: "assistant" as const,
+                  timestamp: Date.now(),
+                }
+                setMessages((prev) => [...prev, timeoutMessage])
+              })
+            } else {
+              // Add timeout message
+              const timeoutMessage = {
+                id: uuidv4(),
+                content: "I'm sorry, but I couldn't get a response in time. Please try again.",
+                role: "assistant" as const,
+                timestamp: Date.now(),
+              }
+              setMessages((prev) => [...prev, timeoutMessage])
             }
-            setMessages((prev) => [...prev, timeoutMessage])
           }
         },
         3 * 60 * 1000,
@@ -246,28 +424,72 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         if (!statusWebhookUrl) {
           clearInterval(intervalId)
           clearTimeout(pollingTimeout)
+          setPollingIntervalId(null)
           return
         }
 
-        const result = await pollJobStatus(jobId, statusWebhookUrl)
+        try {
+          const result = await pollJobStatus(jobId, statusWebhookUrl, userPrompt)
 
-        if (result) {
-          // We got a result, stop polling
-          clearInterval(intervalId)
-          clearTimeout(pollingTimeout)
-          setPollingIntervalId(null)
-          setIsThinking(false)
-          setActivePollingJobId(null)
+          if (result) {
+            // We got a result, stop polling
+            console.log("Received result, stopping polling:", result.substring(0, 100) + "...")
+            clearInterval(intervalId)
+            clearTimeout(pollingTimeout)
+            setPollingIntervalId(null)
+            setIsThinking(false)
+            setActivePollingJobId(null)
 
-          // Add the response to messages
-          const aiResponse = {
-            id: uuidv4(),
-            content: result,
-            role: "assistant" as const,
-            timestamp: Date.now(),
+            // Add the response to messages
+            const aiResponse = {
+              id: uuidv4(),
+              content: result,
+              role: "assistant" as const,
+              timestamp: Date.now(),
+            }
+
+            setMessages((prev) => [...prev, aiResponse])
+          } else {
+            // No result yet, increment retry count if there was an error
+            if (pollingRetryCount > 0) {
+              setPollingRetryCount((prev) => prev + 1)
+            }
           }
+        } catch (error) {
+          console.error("Error in polling interval:", error)
+          setPollingRetryCount((prev) => prev + 1)
 
-          setMessages((prev) => [...prev, aiResponse])
+          // If we've retried too many times, stop polling and show an error
+          if (pollingRetryCount >= MAX_RETRY_COUNT) {
+            clearInterval(intervalId)
+            clearTimeout(pollingTimeout)
+            setPollingIntervalId(null)
+            setIsThinking(false)
+            setActivePollingJobId(null)
+
+            // Try to get a direct response as a fallback
+            if (agentContext) {
+              getDirectResponse(userPrompt, agentContext.agentId).then((directResponse) => {
+                const errorMessage = {
+                  id: uuidv4(),
+                  content:
+                    directResponse || "I'm having trouble connecting to the agent service. Please try again later.",
+                  role: "assistant" as const,
+                  timestamp: Date.now(),
+                }
+                setMessages((prev) => [...prev, errorMessage])
+              })
+            } else {
+              // Add error message
+              const errorMessage = {
+                id: uuidv4(),
+                content: "I'm having trouble connecting to the agent service. Please try again later.",
+                role: "assistant" as const,
+                timestamp: Date.now(),
+              }
+              setMessages((prev) => [...prev, errorMessage])
+            }
+          }
         }
       }, 5000) // Poll every 5 seconds
 
@@ -278,7 +500,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(pollingTimeout)
       }
     },
-    [pollingIntervalId, pollJobStatus],
+    [pollingIntervalId, pollJobStatus, pollingRetryCount, getDirectResponse, agentContext],
   )
 
   const sendMessage = useCallback(
@@ -362,20 +584,36 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 updateJobId(data.jobId)
 
                 // Start polling for status
-                startPolling(data.jobId, agentContext.statusWebhookUrl)
+                startPolling(data.jobId, agentContext.statusWebhookUrl, content)
 
                 // Keep thinking state active
                 return
               }
 
               // If not async, handle as normal
-              const responseContent =
-                data.output ||
-                data.response ||
-                data.text ||
-                data.content ||
-                data.message ||
-                (typeof data === "string" ? data : JSON.stringify(data))
+              let responseContent
+
+              // Handle nested Output.output structure
+              if (data.Output && data.Output.output) {
+                const output = data.Output.output
+                if (typeof output === "string") {
+                  responseContent = output
+                } else if (output && typeof output === "object") {
+                  responseContent = output.text || output.content || output.message || JSON.stringify(output)
+                } else {
+                  responseContent = String(output)
+                }
+              } else {
+                responseContent =
+                  data.output ||
+                  data.response ||
+                  data.text ||
+                  data.content ||
+                  data.message ||
+                  (typeof data === "string" ? data : JSON.stringify(data))
+              }
+
+              console.log("Final response content:", responseContent)
 
               // Create AI response
               const aiResponse = {
@@ -406,15 +644,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           } catch (error) {
             console.error("Webhook error:", error)
 
-            // Add error message
-            const errorMessage = {
+            // Try to get a direct response as a fallback
+            const directResponse = await getDirectResponse(content, agentContext.agentId)
+
+            // Add response message
+            const responseMessage = {
               id: uuidv4(),
-              content: `I'm having trouble connecting to the ${agentContext.agentName} service right now. Please try again in a moment.`,
+              content: directResponse,
               role: "assistant" as const,
               timestamp: Date.now(),
             }
 
-            setMessages((prev) => [...prev, errorMessage])
+            setMessages((prev) => [...prev, responseMessage])
             setIsThinking(false)
           }
         } else {
@@ -478,7 +719,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setIsThinking(false)
       }
     },
-    [agentContext, messages, updateJobId, startPolling],
+    [agentContext, messages, updateJobId, startPolling, getDirectResponse],
   )
 
   const clearChat = useCallback(() => {
@@ -548,12 +789,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setAgentContext(chatToLoad.agentContext)
       setCurrentChatId(chatId)
       setIsThinking(false)
+      setActivePollingJobId(null)
 
       // If this chat has an active job, resume polling
       if (chatToLoad.jobId && chatToLoad.agentContext?.statusWebhookUrl) {
+        // Get the last user message to use as the prompt for fallback
+        const lastUserMessage = [...chatToLoad.messages].reverse().find((msg) => msg.role === "user")
+        const userPrompt = lastUserMessage ? lastUserMessage.content : ""
+
         setIsThinking(true)
         setThinkingStartTime(Date.now())
-        startPolling(chatToLoad.jobId, chatToLoad.agentContext.statusWebhookUrl)
+        startPolling(chatToLoad.jobId, chatToLoad.agentContext.statusWebhookUrl, userPrompt)
       }
     },
     [savedChats, pollingIntervalId, startPolling],

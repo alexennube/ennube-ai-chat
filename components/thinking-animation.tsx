@@ -10,36 +10,53 @@ export interface ThinkingAnimationProps {
 
 export function ThinkingAnimation({ startTime = Date.now(), className }: ThinkingAnimationProps) {
   const [thinkingText, setThinkingText] = useState("Thinking")
+  const [dots, setDots] = useState("...")
 
   useEffect(() => {
     const updateThinkingText = () => {
       const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000)
 
       if (elapsedSeconds >= 120) {
-        setThinkingText("Thinking Really Hard")
+        setThinkingText("Still Processing")
       } else if (elapsedSeconds >= 60) {
-        setThinkingText("Thinking Hard")
+        setThinkingText("Processing Request")
+      } else if (elapsedSeconds >= 30) {
+        setThinkingText("Working on It")
       } else {
         setThinkingText("Thinking")
       }
     }
 
-    // Update immediately and then every second
-    updateThinkingText()
-    const intervalId = setInterval(updateThinkingText, 1000)
+    // Update dots animation
+    const updateDots = () => {
+      setDots((prev) => {
+        if (prev === "...") return "."
+        if (prev === ".") return ".."
+        if (prev === "..") return "..."
+        return "."
+      })
+    }
 
-    return () => clearInterval(intervalId)
+    // Update immediately and then every second for thinking text
+    updateThinkingText()
+    const textIntervalId = setInterval(updateThinkingText, 5000)
+
+    // Update dots every 500ms
+    const dotsIntervalId = setInterval(updateDots, 500)
+
+    return () => {
+      clearInterval(textIntervalId)
+      clearInterval(dotsIntervalId)
+    }
   }, [startTime])
 
   return (
     <div className={cn("flex items-start", className)}>
       <div className="max-w-[80%] bg-gray-100 text-gray-900 rounded-lg px-4 py-2 border border-gray-200">
         <div className="flex items-center space-x-2">
-          <span>{thinkingText}</span>
-          <span className="flex space-x-1">
-            <span className="animate-bounce delay-0 h-1 w-1 rounded-full bg-gray-500"></span>
-            <span className="animate-bounce delay-150 h-1 w-1 rounded-full bg-gray-500"></span>
-            <span className="animate-bounce delay-300 h-1 w-1 rounded-full bg-gray-500"></span>
+          <span>
+            {thinkingText}
+            {dots}
           </span>
         </div>
       </div>

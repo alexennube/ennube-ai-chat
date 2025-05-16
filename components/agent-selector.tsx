@@ -25,8 +25,8 @@ const defaultAgents: AgentContext[] = [
       "Build prospect lists",
     ],
     webhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/9c4ee75d-5f1c-46fc-a9ec-8201cb2a5f86/chat",
-    statusWebhookUrl:
-      "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/9c4ee75d-5f1c-46fc-a9ec-8201cb2a5f86/status",
+    // Make sure the status webhook URL is correct for GET requests
+    statusWebhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/0f029070-665a-4ae3-9e91-a826f6b54407",
   },
   {
     agentId: "market-nurturer",
