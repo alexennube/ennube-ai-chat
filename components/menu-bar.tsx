@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useClickOutside } from "@/hooks/use-click-outside"
+import { useChat } from "@/contexts/chat-context"
 import {
   ChevronDown,
   LogOut,
@@ -20,6 +21,8 @@ import {
   UserCircle,
   Users,
   BarChart,
+  Clock,
+  Trash2,
 } from "lucide-react"
 
 type MenuItem = {
@@ -45,6 +48,7 @@ export function MenuBar({ onViewAllAgents }: MenuBarProps) {
   const [dropdownPositions, setDropdownPositions] = useState<Record<string, { left: number }>>({})
   const router = useRouter()
   const [user] = useState({ name: "Demo User", email: "user@example.com" })
+  const { savedChats, loadChat, deleteChat } = useChat()
 
   useClickOutside(menuRef, () => {
     setActiveMenu(null)
@@ -79,6 +83,16 @@ export function MenuBar({ onViewAllAgents }: MenuBarProps) {
       onViewAllAgents()
       setActiveMenu(null)
     }
+  }
+
+  const handleLoadChat = (chatId: string) => {
+    loadChat(chatId)
+    setActiveMenu(null)
+  }
+
+  const handleDeleteChat = (e: React.MouseEvent, chatId: string) => {
+    e.stopPropagation()
+    deleteChat(chatId)
   }
 
   const fileMenu: MenuItem[] = [
@@ -147,6 +161,37 @@ export function MenuBar({ onViewAllAgents }: MenuBarProps) {
     })
   }
 
+  const renderSavedChats = () => {
+    if (savedChats.length === 0) {
+      return <li className="px-4 py-2 text-sm text-gray-500 italic">No saved chats yet</li>
+    }
+
+    // Show only the 3 most recent chats
+    return savedChats.slice(0, 3).map((chat) => (
+      <li key={chat.id} className="w-full">
+        <button
+          className="flex items-center justify-between px-4 py-2 text-sm hover:bg-gray-100 w-full text-left group"
+          onClick={() => handleLoadChat(chat.id)}
+        >
+          <div className="flex items-center flex-1 min-w-0">
+            <Clock className="h-4 w-4 mr-2 flex-shrink-0 text-gray-500" />
+            <div className="truncate">
+              <div className="font-medium truncate">{chat.title}</div>
+              <div className="text-xs text-gray-500 truncate">{chat.preview}</div>
+            </div>
+          </div>
+          <button
+            onClick={(e) => handleDeleteChat(e, chat.id)}
+            className="ml-2 p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-gray-200 transition-opacity"
+            aria-label="Delete chat"
+          >
+            <Trash2 className="h-3 w-3 text-gray-500" />
+          </button>
+        </button>
+      </li>
+    ))
+  }
+
   return (
     <div ref={menuRef} className="bg-white border-b border-gray-200">
       <div className="flex items-center h-8 px-2">
@@ -193,7 +238,7 @@ export function MenuBar({ onViewAllAgents }: MenuBarProps) {
       {/* Dropdown menus */}
       {activeMenu && (
         <div
-          className="absolute z-10 mt-1 w-48 bg-white border border-gray-200 shadow-lg rounded-md overflow-hidden"
+          className="absolute z-10 mt-1 w-64 bg-white border border-gray-200 shadow-lg rounded-md overflow-hidden"
           style={{
             left: menuButtonRefs.current[activeMenu]?.offsetLeft || 0,
           }}
@@ -208,7 +253,18 @@ export function MenuBar({ onViewAllAgents }: MenuBarProps) {
             </>
           )}
           {activeMenu === "agents" && <ul className="py-1">{renderMenuItems(agentsMenu)}</ul>}
-          {activeMenu === "history" && <ul className="py-1">{renderMenuItems(historyMenu)}</ul>}
+          {activeMenu === "history" && (
+            <>
+              <div className="px-4 py-2 border-b border-gray-200">
+                <p className="text-sm font-medium">Recent Chats</p>
+              </div>
+              <ul className="py-1">
+                {renderSavedChats()}
+                <li className="border-t border-gray-200 my-1"></li>
+                {renderMenuItems(historyMenu)}
+              </ul>
+            </>
+          )}
           {activeMenu === "help" && <ul className="py-1">{renderMenuItems(helpMenu)}</ul>}
         </div>
       )}

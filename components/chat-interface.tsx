@@ -29,7 +29,18 @@ export function ChatInterface({
   maxHeight = "70vh",
   onAgentProfileClick,
 }: ChatInterfaceProps) {
-  const { messages, isThinking, inputValue, agentContext, setInputValue, sendMessage, clearChat } = useChat()
+  const {
+    messages,
+    isThinking,
+    thinkingStartTime,
+    inputValue,
+    agentContext,
+    currentChatId,
+    setInputValue,
+    sendMessage,
+    clearChat,
+  } = useChat()
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -141,7 +152,7 @@ export function ChatInterface({
                 />
               </div>
             )}
-            <ThinkingAnimation className="flex-1" />
+            <ThinkingAnimation startTime={thinkingStartTime} className="flex-1" />
           </div>
         )}
 

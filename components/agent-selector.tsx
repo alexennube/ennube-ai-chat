@@ -25,6 +25,8 @@ const defaultAgents: AgentContext[] = [
       "Build prospect lists",
     ],
     webhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/9c4ee75d-5f1c-46fc-a9ec-8201cb2a5f86/chat",
+    statusWebhookUrl:
+      "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/9c4ee75d-5f1c-46fc-a9ec-8201cb2a5f86/status",
   },
   {
     agentId: "market-nurturer",
@@ -39,6 +41,8 @@ const defaultAgents: AgentContext[] = [
       "Lead nurturing",
       "Customer engagement",
     ],
+    webhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/market-nurturer/chat",
+    statusWebhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/market-nurturer/status",
   },
   {
     agentId: "meetings-booker",
@@ -53,6 +57,8 @@ const defaultAgents: AgentContext[] = [
       "Manage calendars",
       "Coordinate time zones",
     ],
+    webhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/meetings-booker/chat",
+    statusWebhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/meetings-booker/status",
   },
   {
     agentId: "data-steward",
@@ -67,6 +73,8 @@ const defaultAgents: AgentContext[] = [
       "Quality control",
       "Database management",
     ],
+    webhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/data-steward/chat",
+    statusWebhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/data-steward/status",
   },
 ]
 
