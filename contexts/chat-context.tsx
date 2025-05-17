@@ -68,6 +68,37 @@ const generateChatTitle = (messages: Message[], agentName: string | null): strin
 // Helper function to add a delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
+// Update the combineOutputAndItems function to properly format lists with newlines
+
+// Replace the existing combineOutputAndItems function with this improved version:
+const combineOutputAndItems = (output: any, items: any): string => {
+  if (!output && !items) return "No response provided."
+
+  if (!items) return String(output)
+  if (!output) return String(items)
+
+  // If output ends with a colon or similar, it's likely introducing the items
+  const outputStr = String(output)
+  const itemsStr = String(items)
+
+  // Process the items string to ensure proper formatting
+  const processedItems = itemsStr
+    // Replace \n with actual newlines
+    .replace(/\\n/g, "\n")
+    // Ensure there's proper spacing after list numbers
+    .replace(/(\d+\.\s*\*\*[^:]+\*\*):(\s*)/g, "$1:$2 ")
+    // Ensure there's proper spacing between list items
+    .split("\n")
+    .join("\n\n")
+    .trim()
+
+  if (outputStr.trim().endsWith(":")) {
+    return `${outputStr}\n\n${processedItems}`
+  } else {
+    return `${outputStr}\n\n${processedItems}`
+  }
+}
+
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState("")
@@ -240,15 +271,29 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           return null
         }
 
+        // First check if the response is empty
         const responseText = await response.text()
         console.log("Raw status response:", responseText)
+
+        if (!responseText || responseText.trim() === "") {
+          console.error("Empty response from status proxy")
+          setWebhookErrorCount((prev) => prev + 1)
+          return null
+        }
 
         let data
         try {
           data = JSON.parse(responseText)
         } catch (jsonError) {
-          console.error("Error parsing status response:", jsonError)
+          console.error("Error parsing status response:", jsonError, "Response text:", responseText)
           setWebhookErrorCount((prev) => prev + 1)
+
+          // If this looks like plain text (not JSON), we might want to use it directly
+          if (!responseText.startsWith("{") && !responseText.startsWith("[")) {
+            console.log("Response appears to be plain text, not JSON")
+            return responseText
+          }
+
           return null
         }
 
@@ -279,42 +324,34 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           console.log("Processing array item:", item)
 
           // Check for Complete status (capital C)
-          if (item.status === "Complete" && item.Output && item.Output.output) {
-            const output = item.Output.output
-            console.log("Job completed with output:", output)
+          if (item.status === "Complete" && item.Output) {
+            console.log("Job completed with Output:", item.Output)
 
-            // Ensure we're returning a string
-            if (typeof output === "string") {
-              return output
-            } else if (output && typeof output === "object") {
-              console.log("Output is an object, converting to string:", output)
-              try {
-                // Try to get a meaningful string representation
-                return output.text || output.content || output.message || JSON.stringify(output)
-              } catch (e) {
-                console.error("Error stringifying output:", e)
-                return "The agent provided a response in an unexpected format."
-              }
+            // Check for both output and items fields
+            if (item.Output.output || item.Output.items) {
+              const output = item.Output.output
+              const items = item.Output.items
+
+              console.log("Output:", output)
+              console.log("Items:", items)
+
+              // Combine output and items if both exist
+              const combinedOutput = combineOutputAndItems(output, items)
+              console.log("Combined output:", combinedOutput)
+
+              return combinedOutput
             }
           }
 
           // Check if Output exists even without Complete status
-          if (item.Output && item.Output.output) {
+          if (item.Output) {
             const output = item.Output.output
-            console.log("Found output without Complete status:", output)
+            const items = item.Output.items
 
-            // Ensure we're returning a string
-            if (typeof output === "string") {
-              return output
-            } else if (output && typeof output === "object") {
-              console.log("Output is an object, converting to string:", output)
-              try {
-                // Try to get a meaningful string representation
-                return output.text || output.content || output.message || JSON.stringify(output)
-              } catch (e) {
-                console.error("Error stringifying output:", e)
-                return "The agent provided a response in an unexpected format."
-              }
+            if (output || items) {
+              const combinedOutput = combineOutputAndItems(output, items)
+              console.log("Found output without Complete status:", combinedOutput)
+              return combinedOutput
             }
           }
 
@@ -331,18 +368,30 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Check for completed status - handle various formats
-        if (
-          (data.status === "completed" || data.status === "Completed" || data.status === "Complete") &&
-          data.output &&
-          data.output !== "null"
-        ) {
+        if ((data.status === "completed" || data.status === "Completed" || data.status === "Complete") && data.output) {
           console.log("Job completed with output:", data.output)
+
+          // Check for items field
+          if (data.items) {
+            const combinedOutput = combineOutputAndItems(data.output, data.items)
+            console.log("Combined output and items:", combinedOutput)
+            return combinedOutput
+          }
+
           return data.output
         }
 
         // Check if output exists even without status
-        if (data.output && data.output !== "null" && typeof data.output === "string" && data.output.trim() !== "") {
+        if (data.output) {
           console.log("Found output without completed status:", data.output)
+
+          // Check for items field
+          if (data.items) {
+            const combinedOutput = combineOutputAndItems(data.output, data.items)
+            console.log("Combined output and items:", combinedOutput)
+            return combinedOutput
+          }
+
           return data.output
         }
 
@@ -593,24 +642,31 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               // If not async, handle as normal
               let responseContent
 
-              // Handle nested Output.output structure
-              if (data.Output && data.Output.output) {
+              // Handle nested Output.output structure and items
+              if (data.Output) {
                 const output = data.Output.output
-                if (typeof output === "string") {
-                  responseContent = output
-                } else if (output && typeof output === "object") {
-                  responseContent = output.text || output.content || output.message || JSON.stringify(output)
+                const items = data.Output.items
+
+                if (output || items) {
+                  responseContent = combineOutputAndItems(output, items)
                 } else {
-                  responseContent = String(output)
+                  responseContent = "The agent didn't provide a response."
                 }
               } else {
-                responseContent =
-                  data.output ||
-                  data.response ||
-                  data.text ||
-                  data.content ||
-                  data.message ||
-                  (typeof data === "string" ? data : JSON.stringify(data))
+                // Check for output and items at the top level
+                const output = data.output
+                const items = data.items
+
+                if (output || items) {
+                  responseContent = combineOutputAndItems(output, items)
+                } else {
+                  responseContent =
+                    data.response ||
+                    data.text ||
+                    data.content ||
+                    data.message ||
+                    (typeof data === "string" ? data : JSON.stringify(data))
+                }
               }
 
               console.log("Final response content:", responseContent)

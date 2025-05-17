@@ -73,6 +73,20 @@ export async function POST(req: Request) {
       const responseText = await response.text()
       console.log("Raw webhook response:", responseText)
 
+      // Check if the response is empty
+      if (!responseText || responseText.trim() === "") {
+        console.error("Empty response from webhook")
+        return NextResponse.json(
+          {
+            status: "error",
+            error: "Empty response from webhook",
+            fallback: true,
+            output: "The agent service returned an empty response. Please try again later.",
+          },
+          { status: 200 },
+        )
+      }
+
       try {
         // Try to parse as JSON
         const data = JSON.parse(responseText)
@@ -97,8 +111,36 @@ export async function POST(req: Request) {
         // The client-side code will handle the specific format
         return NextResponse.json(data)
       } catch (jsonError) {
-        console.error("Error parsing JSON response:", jsonError)
-        // If not JSON, return as text but wrapped in a JSON structure
+        console.error("Error parsing JSON response:", jsonError, "Response text:", responseText)
+
+        // Try to salvage the response if it looks like it might be JSON with some issues
+        if (responseText.includes("{") && responseText.includes("}")) {
+          console.log("Attempting to salvage malformed JSON")
+          try {
+            // Try to clean up common JSON issues
+            const cleanedText = responseText
+              .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // Remove control characters
+              .replace(/,\s*}/g, "}") // Remove trailing commas
+              .replace(/,\s*]/g, "]") // Remove trailing commas in arrays
+
+            const data = JSON.parse(cleanedText)
+            console.log("Successfully salvaged JSON:", data)
+            return NextResponse.json(data)
+          } catch (e) {
+            console.error("Failed to salvage JSON:", e)
+          }
+        }
+
+        // If the response looks like it might be plain text (not JSON)
+        if (!responseText.startsWith("{") && !responseText.startsWith("[")) {
+          console.log("Response appears to be plain text, not JSON")
+          return NextResponse.json({
+            status: "completed",
+            output: responseText,
+          })
+        }
+
+        // If all else fails, return a fallback error response
         return NextResponse.json({
           status: "error",
           error: "Invalid JSON response from webhook",

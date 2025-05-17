@@ -40,7 +40,7 @@ export function ChatMessage({ message, showTimestamp = true, showCopyButton = tr
           isUser ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-900 border border-gray-200",
         )}
       >
-        <span className="whitespace-normal break-words">{message.content}</span>
+        <span className="whitespace-pre-wrap break-words">{message.content}</span>
       </div>
 
       <div className="flex items-center mt-1 text-xs text-gray-500 space-x-2">
