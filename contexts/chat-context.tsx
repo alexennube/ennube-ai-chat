@@ -74,12 +74,24 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 const combineOutputAndItems = (output: any, items: any): string => {
   if (!output && !items) return "No response provided."
 
-  if (!items) return String(output)
-  if (!output) return String(items)
+  // If items is empty, null, undefined, or "none", just return the output
+  if (!items || items === "none" || items.trim?.() === "" || items === "null") {
+    return String(output || "")
+  }
 
-  // If output ends with a colon or similar, it's likely introducing the items
+  // If output is empty, just return the items
+  if (!output || output.trim?.() === "") {
+    return String(items)
+  }
+
+  // Process the items string to ensure proper formatting
   const outputStr = String(output)
   const itemsStr = String(items)
+
+  // Don't add items if it's just "none"
+  if (itemsStr.trim().toLowerCase() === "none") {
+    return outputStr
+  }
 
   // Process the items string to ensure proper formatting
   const processedItems = itemsStr
