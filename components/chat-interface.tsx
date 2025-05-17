@@ -96,7 +96,11 @@ export function ChatInterface({
             <Button
               variant="ghost"
               size="icon"
-              onClick={clearChat}
+              onClick={() => {
+                clearChat()
+                // Focus the input field after clearing the chat
+                setTimeout(() => inputRef.current?.focus(), 0)
+              }}
               className="text-gray-500 hover:bg-gray-100 ml-2"
               aria-label="Clear chat"
             >

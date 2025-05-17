@@ -32,6 +32,23 @@ export function ChatMessage({ message, showTimestamp = true, showCopyButton = tr
 
   const isUser = message.role === "user"
 
+  // Format the message content to render bold text
+  const formatContent = (content: string) => {
+    // Split the content by bold markers
+    const parts = content.split(/(\*\*[^*]+\*\*)/g)
+
+    return parts.map((part, index) => {
+      // Check if this part is bold text (surrounded by **)
+      if (part.startsWith("**") && part.endsWith("**")) {
+        // Extract the text without the ** markers
+        const boldText = part.substring(2, part.length - 2)
+        return <strong key={index}>{boldText}</strong>
+      }
+      // Return regular text as is
+      return part
+    })
+  }
+
   return (
     <div className={cn("flex flex-col", isUser ? "items-end" : "items-start", className)}>
       <div
@@ -40,7 +57,7 @@ export function ChatMessage({ message, showTimestamp = true, showCopyButton = tr
           isUser ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-900 border border-gray-200",
         )}
       >
-        <span className="whitespace-pre-wrap break-words">{message.content}</span>
+        <span className="whitespace-pre-wrap break-words">{formatContent(message.content)}</span>
       </div>
 
       <div className="flex items-center mt-1 text-xs text-gray-500 space-x-2">

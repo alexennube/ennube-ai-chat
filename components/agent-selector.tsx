@@ -41,8 +41,8 @@ const defaultAgents: AgentContext[] = [
       "Lead nurturing",
       "Customer engagement",
     ],
-    webhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/market-nurturer/chat",
-    statusWebhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/market-nurturer/status",
+    webhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/da86beb4-7865-4d08-8121-c6c7511839fd/chat",
+    statusWebhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/06d643c9-908e-4bb6-b5f9-b9abcb54e917",
   },
   {
     agentId: "meetings-booker",
@@ -57,8 +57,8 @@ const defaultAgents: AgentContext[] = [
       "Manage calendars",
       "Coordinate time zones",
     ],
-    webhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/meetings-booker/chat",
-    statusWebhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/meetings-booker/status",
+    webhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/e1479049-d54d-45f6-9389-4c8ab03d7024/chat",
+    statusWebhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/325c20ab-02c0-4803-a3c2-e9bd81cb5d17",
   },
   {
     agentId: "data-steward",
@@ -73,8 +73,8 @@ const defaultAgents: AgentContext[] = [
       "Quality control",
       "Database management",
     ],
-    webhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/data-steward/chat",
-    statusWebhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/data-steward/status",
+    webhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/f70c2816-fa37-4bba-9951-05e5fb8bd29c/chat",
+    statusWebhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/1e181499-c5f1-4480-a458-a8fe6b3a55fb",
   },
 ]
 
@@ -95,7 +95,7 @@ export function AgentSelector({
   onShowProfile,
   onClose,
 }: AgentSelectorProps) {
-  const { agentContext, setAgentContext } = useChat()
+  const { agentContext, setAgentContext, clearChat } = useChat()
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
 
@@ -115,8 +115,15 @@ export function AgentSelector({
   }, [agentContext])
 
   const handleAgentSelect = (agent: AgentContext) => {
+    // If we're switching to a different agent, clear the chat first
+    if (agentContext && agentContext.agentId !== agent.agentId) {
+      clearChat()
+    }
+
+    // Set the new agent context
     setAgentContext(agent)
     setSelectedAgentId(agent.agentId)
+
     if (onShowProfile) {
       onShowProfile(agent)
     }

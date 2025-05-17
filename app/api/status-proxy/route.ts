@@ -32,6 +32,16 @@ export async function POST(req: Request) {
           Accept: "application/json",
         },
         signal: controller.signal,
+      }).catch((error) => {
+        console.error("Fetch error in status-proxy:", error)
+        // Return a custom response object to indicate network error
+        return {
+          ok: false,
+          status: 0,
+          statusText: "Network Error",
+          text: async () => `Network error: ${error.message}`,
+          headers: new Headers(),
+        } as Response
       })
 
       clearTimeout(timeoutId)
@@ -39,6 +49,21 @@ export async function POST(req: Request) {
       // Log the response status and headers for debugging
       console.log("Status webhook response status:", response.status)
       console.log("Status webhook response headers:", Object.fromEntries(response.headers.entries()))
+
+      // Handle network errors (status 0)
+      if (response.status === 0) {
+        console.error(`Network error connecting to webhook: ${webhookUrl}`)
+        return NextResponse.json(
+          {
+            status: "error",
+            error: "Network error connecting to webhook",
+            fallback: true,
+            output:
+              "I couldn't check the status of your request because the status service is unreachable. The agent might still be working on your request.",
+          },
+          { status: 200 }, // Return 200 to the client so we can handle this gracefully
+        )
+      }
 
       if (response.status === 404) {
         console.error(`Status webhook not found: ${webhookUrl}`)
@@ -50,6 +75,20 @@ export async function POST(req: Request) {
             fallback: true,
             output:
               "I couldn't check the status of your request because the status service is unavailable. The agent might still be working on your request.",
+          },
+          { status: 200 }, // Return 200 to the client so we can handle this gracefully
+        )
+      }
+
+      if (response.status === 500) {
+        console.error(`Status webhook server error: ${webhookUrl}`)
+        return NextResponse.json(
+          {
+            status: "error",
+            error: "Status webhook server error",
+            fallback: true,
+            output:
+              "The status service encountered an internal error. The agent might still be working on your request, but I can't confirm that right now.",
           },
           { status: 200 }, // Return 200 to the client so we can handle this gracefully
         )
@@ -70,7 +109,11 @@ export async function POST(req: Request) {
       }
 
       // Get the response as text first
-      const responseText = await response.text()
+      const responseText = await response.text().catch((error) => {
+        console.error("Error reading response text:", error)
+        return ""
+      })
+
       console.log("Raw webhook response:", responseText)
 
       // Check if the response is empty
@@ -163,6 +206,14 @@ export async function POST(req: Request) {
     }
   } catch (error) {
     console.error("Error in status-proxy route:", error)
-    return NextResponse.json({ error: "Internal server error", details: error.message }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        details: error.message,
+        fallback: true,
+        output: "There was an internal error processing your request. Please try again later.",
+      },
+      { status: 200 },
+    )
   }
 }

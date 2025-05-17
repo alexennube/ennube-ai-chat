@@ -262,57 +262,179 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
 
-        // Use API route as a proxy to avoid CORS issues
-        const response = await fetch("/api/status-proxy", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            jobId,
-            webhookUrl: statusWebhookUrl,
-          }),
-          signal: controller.signal,
-        })
-
-        clearTimeout(timeoutId)
-
-        if (!response.ok) {
-          console.error(`Status proxy error: ${response.status}`)
-          setWebhookErrorCount((prev) => prev + 1)
-          return null
-        }
-
-        // First check if the response is empty
-        const responseText = await response.text()
-        console.log("Raw status response:", responseText)
-
-        if (!responseText || responseText.trim() === "") {
-          console.error("Empty response from status proxy")
-          setWebhookErrorCount((prev) => prev + 1)
-          return null
-        }
-
-        let data
         try {
-          data = JSON.parse(responseText)
-        } catch (jsonError) {
-          console.error("Error parsing status response:", jsonError, "Response text:", responseText)
-          setWebhookErrorCount((prev) => prev + 1)
+          // Use API route as a proxy to avoid CORS issues
+          const response = await fetch("/api/status-proxy", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              jobId,
+              webhookUrl: statusWebhookUrl,
+            }),
+            signal: controller.signal,
+          }).catch((error) => {
+            console.error("Fetch error in pollJobStatus:", error)
+            throw new Error(`Network error: ${error.message}`)
+          })
 
-          // If this looks like plain text (not JSON), we might want to use it directly
-          if (!responseText.startsWith("{") && !responseText.startsWith("[")) {
-            console.log("Response appears to be plain text, not JSON")
-            return responseText
+          clearTimeout(timeoutId)
+
+          if (!response.ok) {
+            console.error(`Status proxy error: ${response.status}`)
+            setWebhookErrorCount((prev) => prev + 1)
+
+            // If we've had too many webhook errors, try to get a direct response
+            if (webhookErrorCount >= MAX_WEBHOOK_ERRORS && agentContext) {
+              console.log("Too many webhook errors, getting direct response")
+              const directResponse = await getDirectResponse(userPrompt, agentContext.agentId)
+              return directResponse
+            }
+
+            return null
           }
 
+          // First check if the response is empty
+          let responseText
+          try {
+            responseText = await response.text()
+          } catch (textError) {
+            console.error("Error reading response text:", textError)
+            setWebhookErrorCount((prev) => prev + 1)
+            return null
+          }
+
+          console.log("Raw status response:", responseText)
+
+          if (!responseText || responseText.trim() === "") {
+            console.error("Empty response from status proxy")
+            setWebhookErrorCount((prev) => prev + 1)
+            return null
+          }
+
+          let data
+          try {
+            data = JSON.parse(responseText)
+          } catch (jsonError) {
+            console.error("Error parsing status response:", jsonError, "Response text:", responseText)
+            setWebhookErrorCount((prev) => prev + 1)
+
+            // If this looks like plain text (not JSON), we might want to use it directly
+            if (!responseText.startsWith("{") && !responseText.startsWith("[")) {
+              console.log("Response appears to be plain text, not JSON")
+              return responseText
+            }
+
+            return null
+          }
+
+          console.log("Status proxy response:", data)
+
+          // Check if we got a fallback response due to webhook errors
+          if (data.fallback) {
+            setWebhookErrorCount((prev) => prev + 1)
+
+            // If we have a fallback output, use it
+            if (data.output) {
+              return data.output
+            }
+
+            // If we've had too many webhook errors, try to get a direct response
+            if (webhookErrorCount >= MAX_WEBHOOK_ERRORS && agentContext) {
+              console.log("Too many webhook errors, getting direct response")
+              const directResponse = await getDirectResponse(userPrompt, agentContext.agentId)
+              return directResponse
+            }
+
+            return null
+          }
+
+          // Rest of the function remains the same...
+          // Handle array response format
+          if (Array.isArray(data) && data.length > 0) {
+            const item = data[0]
+            console.log("Processing array item:", item)
+
+            // Check for Complete status (capital C)
+            if (item.status === "Complete" && item.Output) {
+              console.log("Job completed with Output:", item.Output)
+
+              // Check for both output and items fields
+              if (item.Output.output || item.Output.items) {
+                const output = item.Output.output
+                const items = item.Output.items
+
+                console.log("Output:", output)
+                console.log("Items:", items)
+
+                // Combine output and items if both exist
+                const combinedOutput = combineOutputAndItems(output, items)
+                console.log("Combined output:", combinedOutput)
+
+                return combinedOutput
+              }
+            }
+
+            // Check if Output exists even without Complete status
+            if (item.Output) {
+              const output = item.Output.output
+              const items = item.Output.items
+
+              if (output || items) {
+                const combinedOutput = combineOutputAndItems(output, items)
+                console.log("Found output without Complete status:", combinedOutput)
+                return combinedOutput
+              }
+            }
+
+            // Still processing
+            return null
+          }
+
+          // Handle single object response format (for backward compatibility)
+          // Check if job is still processing
+          if (data.status === "Processing") {
+            console.log("Job is still processing:", data.jobId)
+            // Return null to continue polling
+            return null
+          }
+
+          // Check for completed status - handle various formats
+          if (
+            (data.status === "completed" || data.status === "Completed" || data.status === "Complete") &&
+            data.output
+          ) {
+            console.log("Job completed with output:", data.output)
+
+            // Check for items field
+            if (data.items) {
+              const combinedOutput = combineOutputAndItems(data.output, data.items)
+              console.log("Combined output and items:", combinedOutput)
+              return combinedOutput
+            }
+
+            return data.output
+          }
+
+          // Check if output exists even without status
+          if (data.output) {
+            console.log("Found output without completed status:", data.output)
+
+            // Check for items field
+            if (data.items) {
+              const combinedOutput = combineOutputAndItems(data.output, data.items)
+              console.log("Combined output and items:", combinedOutput)
+              return combinedOutput
+            }
+
+            return data.output
+          }
+
+          // Still processing or unknown status
           return null
-        }
-
-        console.log("Status proxy response:", data)
-
-        // Check if we got a fallback response due to webhook errors
-        if (data.fallback) {
+        } catch (error) {
+          console.error("Error in fetch operation:", error)
           setWebhookErrorCount((prev) => prev + 1)
 
           // If we've had too many webhook errors, try to get a direct response
@@ -322,93 +444,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             return directResponse
           }
 
-          // If we have a fallback output, use it
-          if (data.output) {
-            return data.output
-          }
-
           return null
         }
-
-        // Handle array response format
-        if (Array.isArray(data) && data.length > 0) {
-          const item = data[0]
-          console.log("Processing array item:", item)
-
-          // Check for Complete status (capital C)
-          if (item.status === "Complete" && item.Output) {
-            console.log("Job completed with Output:", item.Output)
-
-            // Check for both output and items fields
-            if (item.Output.output || item.Output.items) {
-              const output = item.Output.output
-              const items = item.Output.items
-
-              console.log("Output:", output)
-              console.log("Items:", items)
-
-              // Combine output and items if both exist
-              const combinedOutput = combineOutputAndItems(output, items)
-              console.log("Combined output:", combinedOutput)
-
-              return combinedOutput
-            }
-          }
-
-          // Check if Output exists even without Complete status
-          if (item.Output) {
-            const output = item.Output.output
-            const items = item.Output.items
-
-            if (output || items) {
-              const combinedOutput = combineOutputAndItems(output, items)
-              console.log("Found output without Complete status:", combinedOutput)
-              return combinedOutput
-            }
-          }
-
-          // Still processing
-          return null
-        }
-
-        // Handle single object response format (for backward compatibility)
-        // Check if job is still processing
-        if (data.status === "Processing") {
-          console.log("Job is still processing:", data.jobId)
-          // Return null to continue polling
-          return null
-        }
-
-        // Check for completed status - handle various formats
-        if ((data.status === "completed" || data.status === "Completed" || data.status === "Complete") && data.output) {
-          console.log("Job completed with output:", data.output)
-
-          // Check for items field
-          if (data.items) {
-            const combinedOutput = combineOutputAndItems(data.output, data.items)
-            console.log("Combined output and items:", combinedOutput)
-            return combinedOutput
-          }
-
-          return data.output
-        }
-
-        // Check if output exists even without status
-        if (data.output) {
-          console.log("Found output without completed status:", data.output)
-
-          // Check for items field
-          if (data.items) {
-            const combinedOutput = combineOutputAndItems(data.output, data.items)
-            console.log("Combined output and items:", combinedOutput)
-            return combinedOutput
-          }
-
-          return data.output
-        }
-
-        // Still processing or unknown status
-        return null
       } catch (error) {
         console.error("Error polling job status:", error)
         setWebhookErrorCount((prev) => prev + 1)
@@ -797,10 +834,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setPollingIntervalId(null)
     }
 
+    // Clear messages and reset state
     setMessages([])
     setCurrentChatId(null)
     setIsThinking(false)
     setActivePollingJobId(null)
+    setInputValue("") // Reset the input value
+
+    // Don't reset the agent context - keep the current agent selected
+    // This allows starting a new chat with the same agent
   }, [pollingIntervalId])
 
   const saveCurrentChat = useCallback(() => {
