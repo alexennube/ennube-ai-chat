@@ -19,6 +19,8 @@ export interface ChatInterfaceProps {
   placeholder?: string
   maxHeight?: string
   onAgentProfileClick?: () => void
+  onMessageSent?: (message: string) => void
+  onMessageReceived?: (message: string) => void
 }
 
 export function ChatInterface({
@@ -28,6 +30,8 @@ export function ChatInterface({
   placeholder = "Type your message...",
   maxHeight = "70vh",
   onAgentProfileClick,
+  onMessageSent,
+  onMessageReceived,
 }: ChatInterfaceProps) {
   const {
     messages,
@@ -44,6 +48,7 @@ export function ChatInterface({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const [isMobile, setIsMobile] = useState(false)
+  const prevMessagesLength = useRef(messages.length)
 
   // Check if device is mobile
   useEffect(() => {
@@ -71,9 +76,23 @@ export function ChatInterface({
     }
   }, [isMobile])
 
+  // Call onMessageReceived when a new assistant message is added
+  useEffect(() => {
+    if (messages.length > prevMessagesLength.current) {
+      const newMessage = messages[messages.length - 1]
+      if (newMessage.role === "assistant" && onMessageReceived) {
+        onMessageReceived(newMessage.content)
+      }
+    }
+    prevMessagesLength.current = messages.length
+  }, [messages, onMessageReceived])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (inputValue.trim() && !isThinking) {
+      if (onMessageSent) {
+        onMessageSent(inputValue)
+      }
       sendMessage(inputValue)
     }
   }
