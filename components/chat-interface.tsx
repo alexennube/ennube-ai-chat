@@ -6,7 +6,7 @@ import { useState, useRef, useEffect } from "react"
 import { useChat } from "@/contexts/chat-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Send, Trash2 } from "lucide-react"
+import { Send, Trash2, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ChatMessage } from "./chat-message"
 import { ThinkingAnimation } from "./thinking-animation"
@@ -21,6 +21,8 @@ export interface ChatInterfaceProps {
   onAgentProfileClick?: () => void
   onMessageSent?: (message: string) => void
   onMessageReceived?: (message: string) => void
+  onOpenAgentPanel?: () => void
+  isAgentPanelOpen?: boolean
 }
 
 export function ChatInterface({
@@ -32,6 +34,8 @@ export function ChatInterface({
   onAgentProfileClick,
   onMessageSent,
   onMessageReceived,
+  onOpenAgentPanel,
+  isAgentPanelOpen = true,
 }: ChatInterfaceProps) {
   const {
     messages,
@@ -100,11 +104,24 @@ export function ChatInterface({
   return (
     <div
       className={cn(
-        "flex flex-col h-full bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200",
+        "flex flex-col h-full bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200 relative",
         className,
       )}
       style={{ maxHeight }}
     >
+      {/* Agent panel toggle button - only shown when panel is closed */}
+      {!isAgentPanelOpen && onOpenAgentPanel && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onOpenAgentPanel}
+          className="absolute left-2 top-1/2 transform -translate-y-1/2 z-10 bg-white shadow-md rounded-full h-8 w-8 border border-gray-200 hover:bg-gray-100"
+          aria-label="Open agent panel"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      )}
+
       {/* Chat header */}
       {showHeader && (
         <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white text-gray-900">

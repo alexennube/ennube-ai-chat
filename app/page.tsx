@@ -60,6 +60,10 @@ function ChatPageContent({
     setShowAgentPanel(false)
   }
 
+  const handleOpenAgentPanel = () => {
+    setShowAgentPanel(true)
+  }
+
   const handleViewAllAgents = () => {
     setShowAgentPanel(true)
     setShowProfile(false)
@@ -118,7 +122,12 @@ function ChatPageContent({
             </div>
           )}
           <div className={showAgentPanel ? "md:col-span-3" : "md:col-span-4"}>
-            <ChatInterface maxHeight="calc(100vh - 140px)" onAgentProfileClick={handleAgentProfileClick} />
+            <ChatInterface
+              maxHeight="calc(100vh - 140px)"
+              onAgentProfileClick={handleAgentProfileClick}
+              onOpenAgentPanel={handleOpenAgentPanel}
+              isAgentPanelOpen={showAgentPanel}
+            />
           </div>
         </div>
       </main>

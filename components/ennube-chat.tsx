@@ -102,6 +102,10 @@ export function EnnubeChat({
     }
   }, [initialAgent])
 
+  const handleOpenAgentPanel = () => {
+    setShowAgentPanelState(true)
+  }
+
   return (
     <ChatProvider>
       <div
@@ -149,6 +153,8 @@ export function EnnubeChat({
                   placeholder={inputPlaceholder}
                   onMessageSent={onMessageSent}
                   onMessageReceived={onMessageReceived}
+                  onOpenAgentPanel={handleOpenAgentPanel}
+                  isAgentPanelOpen={showAgentPanelState}
                 />
               </div>
             </div>

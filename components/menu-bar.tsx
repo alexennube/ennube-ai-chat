@@ -30,6 +30,7 @@ type MenuItem = {
   href?: string
   onClick?: () => void
   icon?: React.ReactNode
+  disabled?: boolean
 }
 
 interface MenuBarProps {
@@ -100,10 +101,10 @@ export function MenuBar({ onViewAllAgents }: MenuBarProps) {
     { label: "Home", href: "https://app.ennube.ai", icon: <Home className="h-4 w-4 mr-2" /> },
     { label: "Dashboard", href: "https://app.ennube.ai/dashboard", icon: <BarChart className="h-4 w-4 mr-2" /> },
     { type: "separator" } as any,
-    { label: "Profile", href: "/profile", icon: <UserCircle className="h-4 w-4 mr-2" /> },
-    { label: "Account", href: "/account", icon: <User className="h-4 w-4 mr-2" /> },
-    { label: "Billing", href: "/billing", icon: <CreditCard className="h-4 w-4 mr-2" /> },
-    { label: "Logout", onClick: handleLogout, icon: <LogOut className="h-4 w-4 mr-2" /> },
+    { label: "Profile", href: "/profile", icon: <UserCircle className="h-4 w-4 mr-2" />, disabled: true },
+    { label: "Account", href: "/account", icon: <User className="h-4 w-4 mr-2" />, disabled: true },
+    { label: "Billing", href: "/billing", icon: <CreditCard className="h-4 w-4 mr-2" />, disabled: true },
+    { label: "Logout", onClick: handleLogout, icon: <LogOut className="h-4 w-4 mr-2" />, disabled: true },
   ]
 
   const agentsMenu: MenuItem[] = [
@@ -122,15 +123,31 @@ export function MenuBar({ onViewAllAgents }: MenuBarProps) {
   ]
 
   const helpMenu: MenuItem[] = [
-    { label: "Documentation", href: "/docs", icon: <BookOpen className="h-4 w-4 mr-2" /> },
-    { label: "Support", href: "/support", icon: <HelpCircle className="h-4 w-4 mr-2" /> },
-    { label: "About Ennube.ai", href: "/about", icon: <Info className="h-4 w-4 mr-2" /> },
+    {
+      label: "Documentation",
+      href: "https://github.com/alexennube/ennube-ai-chat",
+      icon: <BookOpen className="h-4 w-4 mr-2" />,
+    },
+    { label: "Support", href: "mailto:support@ennube.ai", icon: <HelpCircle className="h-4 w-4 mr-2" /> },
+    { label: "About Ennube.ai", href: "https://www.ennube.ai/about", icon: <Info className="h-4 w-4 mr-2" /> },
   ]
 
   const renderMenuItems = (items: MenuItem[]) => {
     return items.map((item, index) => {
       if ((item as any).type === "separator") {
         return <li key={index} className="border-t border-gray-200 my-1"></li>
+      }
+
+      // If the item is disabled, render it with disabled styling
+      if (item.disabled) {
+        return (
+          <li key={index} className="w-full">
+            <div className="flex items-center px-4 py-2 text-sm text-gray-400 cursor-not-allowed w-full text-left">
+              {item.icon}
+              {item.label}
+            </div>
+          </li>
+        )
       }
 
       return (
