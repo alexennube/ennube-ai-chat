@@ -16,7 +16,8 @@ const defaultAgents: AgentContext[] = [
     agentId: "prospect-finder",
     agentName: "Prospect Finder",
     agentDescription: "Track down high-quality prospects for the world's best tech teams",
-    agentImage: "/prospect-finder.jpeg",
+    agentImage:
+      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/prospect-finder.png-AMKsammwEXqXPXKAjO6moM5OeBK6Fb.jpeg",
     capabilities: [
       "Find potential customers",
       "Qualify leads",
@@ -33,7 +34,7 @@ const defaultAgents: AgentContext[] = [
     agentName: "Market Nurturer",
     agentDescription: "Turn curiosity into confianza—then confianza into loyal customers",
     agentImage:
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/market-nurturer-u39lPltDPBVmXQBhCe5OH4NhFQ8JGQ.png",
+      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/market-nurturer-eiuHCLbwOxbMq8KhwWUjVh1BJsdcK8.png",
     capabilities: [
       "Content creation",
       "Email campaigns",
@@ -49,7 +50,7 @@ const defaultAgents: AgentContext[] = [
     agentName: "Meetings Booker",
     agentDescription: "Schedule meetings with prospects efficiently",
     agentImage:
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/meetings-booker-NMIBy2hjh2ECD06WAUnWH6IwC38i3y.png",
+      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/meetings-booker-PG5LtplN0rgc1py5gOKbxQkHojW8XW.png",
     capabilities: [
       "Schedule meetings",
       "Send invitations",
@@ -65,7 +66,7 @@ const defaultAgents: AgentContext[] = [
     agentName: "Data Steward",
     agentDescription: "Keep your CRM data clean and organized",
     agentImage:
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/data-steward-EnlnQ7V3EZRCXz5z3KG9edmJXuW4AI.png",
+      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/data-steward-TMPHUcT93DijdGeXcQPIkwsngCsm6E.png",
     capabilities: [
       "Data cleaning",
       "Record deduplication",
