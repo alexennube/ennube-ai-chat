@@ -228,12 +228,6 @@ MIT License
 
 ---
 
-## 🤝 Contributing
-
-We welcome issues and pull requests! Please see `CONTRIBUTING.md` for how to get started.
-
----
-
 ## 📫 Support
 
 For bugs or feature requests, open a GitHub issue. For commercial inquiries or integration help, email: [support@ennube.ai](mailto:support@ennube.ai)
