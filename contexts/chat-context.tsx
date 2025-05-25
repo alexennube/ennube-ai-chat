@@ -74,8 +74,8 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 const combineOutputAndItems = (output: any, items: any): string => {
   if (!output && !items) return "No response provided."
 
-  // If items is empty, null, undefined, or "none", just return the output
-  if (!items || items === "none" || items.trim?.() === "" || items === "null") {
+  // If items is empty, null, undefined, "none", or "N/A", just return the output
+  if (!items || items === "none" || items === "N/A" || items.trim?.() === "" || items === "null") {
     return String(output || "")
   }
 
@@ -88,8 +88,8 @@ const combineOutputAndItems = (output: any, items: any): string => {
   const outputStr = String(output)
   const itemsStr = String(items)
 
-  // Don't add items if it's just "none"
-  if (itemsStr.trim().toLowerCase() === "none") {
+  // Don't add items if it's just "none" or "N/A"
+  if (itemsStr.trim().toLowerCase() === "none" || itemsStr.trim() === "N/A") {
     return outputStr
   }
 

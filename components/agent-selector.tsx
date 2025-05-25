@@ -26,8 +26,25 @@ const defaultAgents: AgentContext[] = [
       "Build prospect lists",
     ],
     webhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/9c4ee75d-5f1c-46fc-a9ec-8201cb2a5f86/chat",
-    // Make sure the status webhook URL is correct for GET requests
     statusWebhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/0f029070-665a-4ae3-9e91-a826f6b54407",
+  },
+  {
+    agentId: "prospect-finder-hls",
+    agentName: "Prospect Finder HLS",
+    agentDescription: "Track down high quality leads in the health care and life sciences industry.",
+    agentImage:
+      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/ProspectFinderHLS-sXkSYCK7bhaSTnSCaJYosnCAp5vuhm.png",
+    capabilities: [
+      "Find healthcare professionals",
+      "Research primary investigators",
+      "Identify licensed practitioners",
+      "Research medical organizations",
+      "Find pharmaceutical companies",
+      "Locate clinical research sites",
+      "Identify key opinion leaders",
+    ],
+    webhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/8ef6ee53-82ca-4ef9-b506-e2edc562c426/chat",
+    statusWebhookUrl: "https://xucre-n8n-05603adf5e11.herokuapp.com/webhook/6f700dbb-ffc1-433b-abdc-972294cce2f2",
   },
   {
     agentId: "market-nurturer",
