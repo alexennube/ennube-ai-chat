@@ -1,70 +1,119 @@
+# Ennube Chat
 
-# EnnubeChat 💬
+A customizable chat interface with AI agents for Next.js applications.
 
-**EnnubeChat** is a customizable, React-based AI chat interface component for integrating agent-based conversations into any web application. Designed for flexibility, real-time integrations, and enterprise use cases, EnnubeChat allows teams to deploy and manage AI agents with ease.
+## Installation
 
----
-
-## 🚀 Features
-
-- 🧠 Multi-agent architecture
-- 🧩 Plug-and-play Webhook support
-- ⚙️ TailwindCSS styling
-- 🪄 Fully customizable UI
-- 📞 Event hooks for message tracking, agent switching, and lifecycle analytics
-- 🌐 Modern browser support
-- 📦 Easy integration with React 18+ / Next.js 13+
-
----
-
-## 🧰 Installation
-
-```bash
+\`\`\`bash
 npm install ennube-chat
-```
+# or
+yarn add ennube-chat
+# or
+pnpm add ennube-chat
+\`\`\`
 
----
+## Usage
 
-## 🔧 Basic Usage
+\`\`\`jsx
+import { EnnubeChat, type AgentContext } from 'ennube-chat'
 
-```tsx
-import { EnnubeChat } from 'ennube-chat';
+// Define your agents
+const agents: AgentContext[] = [
+  {
+    agentId: "customer-support",
+    agentName: "Customer Support",
+    agentDescription: "Help customers with product questions and issues",
+    agentImage: "/customer-support.png",
+    capabilities: ["Answer product questions", "Troubleshoot issues", "Process returns"],
+    webhookUrl: "https://your-webhook-url.com/customer-support",
+    statusWebhookUrl: "https://your-webhook-url.com/customer-support/status",
+  },
+  // Add more agents as needed
+]
 
-function App() {
+export default function ChatPage() {
   return (
-    <div className="container">
-      <EnnubeChat height="600px" width="100%" />
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Chat with our AI Assistants</h1>
+      
+      <EnnubeChat
+        agents={agents}
+        initialAgent={agents[0]}
+        height="700px"
+        width="100%"
+        showHeader={true}
+        showFooter={true}
+        logoUrl="/your-logo.png"
+        headerTitle="Your Company Name"
+        inputPlaceholder="Ask our AI assistant..."
+        onMessageSent={(message) => console.log("User sent:", message)}
+        onMessageReceived={(message) => console.log("AI replied:", message)}
+        onAgentSelected={(agent) => console.log("Selected agent:", agent.agentName)}
+      />
     </div>
-  );
+  )
 }
-```
+\`\`\`
 
----
+## Required API Routes
 
-## 📌 Props
+You need to add these API routes to your Next.js project:
 
-| Prop               | Type                                 | Default        | Description                                       |
-|--------------------|--------------------------------------|----------------|---------------------------------------------------|
-| `agents`           | `AgentContext[]`                     | Default agents | Custom list of AI agents                         |
-| `initialAgent`     | `AgentContext`                       | `null`         | Agent selected on component load                 |
-| `showHeader`       | `boolean`                            | `true`         | Show/hide header bar                             |
-| `showFooter`       | `boolean`                            | `true`         | Show/hide chat input                             |
-| `showAgentPanel`   | `boolean`                            | `true`         | Show/hide agent selector                         |
-| `className`        | `string`                             | `""`           | Custom container class                           |
-| `height`           | `string`                             | `"600px"`      | Height of chat component                         |
-| `width`            | `string`                             | `"100%"`       | Width of chat component                          |
-| `logoUrl`          | `string`                             | Internal logo  | Replace header logo                              |
-| `headerTitle`      | `string`                             | `"Ennube.ai"`  | Title in header                                  |
-| `inputPlaceholder` | `string`                             | `"Type your message..."` | Placeholder for chat input           |
-| `onMessageSent`    | `(message: string) => void`          | `undefined`    | Callback for outgoing messages                   |
-| `onMessageReceived`| `(message: string) => void`          | `undefined`    | Callback for incoming messages                   |
-| `onAgentSelected`  | `(agent: AgentContext) => void`      | `undefined`    | Callback when user switches agent                |
+### `/api/chat/route.ts`
 
----
+\`\`\`tsx
+import { openai } from "@ai-sdk/openai"
+import { streamText } from "ai"
 
-## 🧠 Agent Configuration
+export async function POST(req: Request) {
+  const { messages, agent } = await req.json()
 
-```ts
+  // Create a system message based on the selected agent
+  let systemMessage = "You are a helpful AI assistant."
+
+  // Customize based on agent type
+  if (agent) {
+    systemMessage = `You are a ${agent} AI assistant.`
+  }
+
+  const result = streamText({
+    model: openai("gpt-4o"),
+    messages,
+    system: systemMessage,
+  })
+
+  return result.toDataStreamResponse()
+}
+\`\`\`
+
+### `/api/status-proxy/route.ts`
+
+This route is needed if you're using asynchronous agents with status webhooks.
+
+## Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `agents` | `AgentContext[]` | Array of agent definitions |
+| `initialAgent` | `AgentContext` | The initially selected agent |
+| `showHeader` | `boolean` | Whether to show the header |
+| `showFooter` | `boolean` | Whether to show the footer |
+| `showAgentPanel` | `boolean` | Whether to show the agent selector panel |
+| `className` | `string` | Custom CSS class for the container |
+| `height` | `string` | Height of the chat container |
+| `width` | `string` | Width of the chat container |
+| `logoUrl` | `string` | Custom logo URL for the header |
+| `headerTitle` | `string` | Custom title for the header |
+| `inputPlaceholder` | `string` | Custom placeholder for the chat input |
+| `onMessageSent` | `(message: string) => void` | Callback when a message is sent |
+| `onMessageReceived` | `(message: string) => void` | Callback when a message is received |
+| `onAgentSelected` | `(agent: AgentContext) => void` | Callback when an agent is selected |
+
+## Types
+
+### AgentContext
+
+\`\`\`tsx
 interface AgentContext {
   agentId: string;
   agentName: string;
@@ -74,162 +123,11 @@ interface AgentContext {
   webhookUrl?: string;
   statusWebhookUrl?: string;
 }
-```
+\`\`\`
 
-### Example Agent
+## Customization
 
-```tsx
-const agents = [
-  {
-    agentId: "support",
-    agentName: "Support Bot",
-    agentDescription: "Handles technical questions",
-    agentImage: "/images/support.png",
-    webhookUrl: "https://your-backend.com/webhook/support",
-    statusWebhookUrl: "https://your-backend.com/status/support"
-  }
-];
-```
+You can customize the appearance of the chat interface by providing your own CSS or using the Tailwind classes.
+\`\`\`
 
----
-
-## 🌐 Webhook API
-
-### Request Format
-
-```json
-{
-  "message": "What's your return policy?",
-  "agentId": "support",
-  "userId": "user_123",
-  "conversationId": "conv_456",
-  "messages": [
-    { "role": "user", "content": "Hi" },
-    { "role": "assistant", "content": "Hello! How can I help?" },
-    { "role": "user", "content": "What's your return policy?" }
-  ]
-}
-```
-
-### Response Format
-
-```json
-{
-  "output": "You can return items within 30 days of purchase.",
-  "items": [ ...optional structured results... ]
-}
-```
-
-### Async Support
-
-If processing is long-running:
-
-```json
-{
-  "jobId": "job_123"
-}
-```
-
----
-
-## 🎨 Custom Styling
-
-```tsx
-<EnnubeChat
-  className="rounded-xl shadow-xl"
-  logoUrl="/images/company-logo.png"
-  headerTitle="Acme Support"
-/>
-```
-
----
-
-## 📡 Advanced Usage
-
-### Event Tracking
-
-```tsx
-<EnnubeChat 
-  onMessageSent={(msg) => analytics.track("message_sent", { msg })}
-  onMessageReceived={(msg) => analytics.track("message_received", { msg })}
-  onAgentSelected={(agent) => analytics.track("agent_selected", { agent })}
- />
-```
-
-### Single-Agent Mode
-
-```tsx
-<EnnubeChat 
-  agents={[supportAgent]}
-  initialAgent={supportAgent}
-  showAgentPanel={false}
-/>
-```
-
----
-
-## 🧱 Requirements
-
-- React 18+
-- TailwindCSS
-- Next.js 13+ (if SSR is used)
-
----
-
-## 🧪 Development
-
-### Local Dev
-
-```bash
-npm install
-npm run dev
-```
-
-### Build for Production
-
-```bash
-npm run build
-```
-
-### Run Tests
-
-```bash
-npm test
-```
-
----
-
-## 📁 File Structure
-
-```
-ennube-chat/
-├── components/
-├── contexts/
-├── hooks/
-├── lib/
-├── index.ts
-└── example-usage.tsx
-```
-
----
-
-## 🛡 Security Notes
-
-- Sanitize all input before processing
-- Use HTTPS for all webhook endpoints
-- Add authentication to your APIs
-- Consider rate-limiting message volume per session
-
----
-
-## 📜 License
-
-MIT License
-
----
-
-## 📫 Support
-
-For bugs or feature requests, open a GitHub issue. For commercial inquiries or integration help, email: [support@ennube.ai](mailto:support@ennube.ai)
-
----
+Let's create a simple example of how to use the library in a Next.js project:
